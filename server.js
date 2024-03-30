@@ -64,7 +64,8 @@ const server = http.createServer((req, res) => {
             // a la DB
             // enviando datos a la DB
             insertUserToDB(dataToSendDb)
-            res.end(`<h1>${JSON.stringify({name, email, passwordCustom, phone})}</h1>`)
+            res.writeHead(302, { 'Location': '/success.html' });
+            res.end();
         })
 
          // decodificando los datos del formulario con body-Parser modulo externo 
@@ -84,11 +85,15 @@ const server = http.createServer((req, res) => {
            })
     
         }
-        if(req.url == '/style.css'){ 
+        else if(req.url == '/style.css'){ 
             // archivo leible
             const data = fs.createReadStream('./public/style.css')
             // generando un conexion de tipo tuberia entre un proceso leible y escribible
             data.pipe(res)
+        }
+        else if (req.url == '/success.html') {
+            const data = fs.createReadStream('./public/success.html', 'utf-8');
+            data.pipe(res);
         }
     }
 
