@@ -12,9 +12,8 @@
    -Una vez que los datos se almacenen correctamente, redirija al usuario a la success.html página.
 */
 
-
+const colors = require('colors')
 const http = require('http')
-const path = require('path'); 
 const fs = require('fs')
 const crypto = require('crypto');
 const {MongoClient} = require('mongodb');
@@ -38,6 +37,7 @@ async function insertUserToDB(userObject) {
     }
     catch(err){
         console.log(err);
+        throw new Error('error in inserting data to Db')
     }
     finally {
         await client.close()
@@ -54,18 +54,24 @@ const server = http.createServer((req, res) => {
         req.on('data', (chunk) => {
             body+=chunk
         })
-        req.on('end', () => {
-            const {name, email, password, phone } = qs.parse(body)
-            const passwordCustom =  getHash(password, phone)
-            const dataToSendDb = {name, email, phone, passwordCustom}
-            console.log(dataToSendDb);
-            // una vez tengamos que recojimos los datos del formulario, parseamos esos
-            // datos y creamos una contraseña segura, solo queda enviar dichos datos
-            // a la DB
-            // enviando datos a la DB
-            insertUserToDB(dataToSendDb)
-            res.writeHead(302, { 'Location': '/success.html' });
-            res.end();
+        req.on('end', async () => {
+            try{
+                const {name, email, password, phone } = qs.parse(body)
+                const passwordCustom =  getHash(password, phone)
+                const dataToSendDb = {name, email, phone, passwordCustom}
+                console.log(dataToSendDb);
+                // una vez tengamos que recojimos los datos del formulario, parseamos esos
+                // datos y creamos una contraseña segura, solo queda enviar dichos datos
+                // a la DB
+                // enviando datos a la DB
+                await insertUserToDB(dataToSendDb)
+                res.writeHead(302, { 'Location': '/success.html' });
+                res.end();
+            }catch(err) {
+                console.log(`${err}`.red);
+                res.writeHead(404, { 'content-type': 'text/html' });
+                res.end(`<h1>${err}</h1>`)
+            }
         })
 
          // decodificando los datos del formulario con body-Parser modulo externo 
@@ -105,9 +111,7 @@ server.listen(3000, () => console.log('listening in por 3000'))
 /* función para realizar la operación HMAC en la contraseña y también usar el número de teléfono del usuario como clave: */
 
 var getHash = ( pass , phone ) => {
-				
-    var hmac = crypto.createHmac('sha512', phone);
-    
+    var hmac = crypto.createHmac('sha512', phone); 
     //passing the data to be hashed
     data = hmac.update(pass);
     //Creating the hmac in the required format
@@ -116,5 +120,4 @@ var getHash = ( pass , phone ) => {
     console.log("hmac : " + gen_hmac);
     return gen_hmac;
 }
-
 
